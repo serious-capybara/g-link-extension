@@ -438,7 +438,7 @@ const Manager = GObject.registerClass({
      */
     _removeDevice(id) {
         // Delete all GSettings
-        const settings_path = `/org/gnome/shell/extensions/g-link/device/${id}/`;
+        const settings_path = `/org/gnome/shell/extensions/glink/device/${id}/`;
         GLib.spawn_command_line_async(`dconf reset -f ${settings_path}`);
 
         // Delete the cache

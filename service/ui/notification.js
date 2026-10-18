@@ -14,7 +14,7 @@ import '../utils/ui.js';
  * A dialog for repliable notifications.
  */
 const ReplyDialog = GObject.registerClass({
-    GTypeName: 'G-LinkNotificationReplyDialog',
+    GTypeName: 'GLinkNotificationReplyDialog',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',

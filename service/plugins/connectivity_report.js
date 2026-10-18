@@ -26,10 +26,9 @@ export const Metadata = {
 
 /**
  * Connectivity Report Plugin
- * https://invent.g-link.org/network/glink-kde/-/tree/master/plugins/connectivity_report
  */
 const ConnectivityReportPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkConnectivityReportPlugin',
+    GTypeName: 'GLinkConnectivityReportPlugin',
 }, class ConnectivityReportPlugin extends Plugin {
 
     _init(device) {

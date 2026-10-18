@@ -44,11 +44,9 @@ export const Metadata = {
 
 /**
  * RunCommand Plugin
- * https://github.com/G-Link/glink-kde/tree/master/plugins/remotecommands
- * https://github.com/G-Link/glink-kde/tree/master/plugins/runcommand
  */
 const RunCommandPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkRunCommandPlugin',
+    GTypeName: 'GLinkRunCommandPlugin',
     Properties: {
         'remote-commands': GObject.param_spec_variant(
             'remote-commands',

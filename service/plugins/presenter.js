@@ -20,11 +20,9 @@ export const Metadata = {
 
 /**
  * Presenter Plugin
- * https://github.com/G-Link/glink-kde/tree/master/plugins/presenter
- * https://github.com/G-Link/glink-android/tree/master/src/org/kde/glink/Plugins/PresenterPlugin/
  */
 const PresenterPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkPresenterPlugin',
+    GTypeName: 'GLinkPresenterPlugin',
 }, class PresenterPlugin extends Plugin {
 
     _init(device) {

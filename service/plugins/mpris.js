@@ -26,14 +26,13 @@ export const Metadata = {
 
 /**
  * MPRIS Plugin
- * https://github.com/G-Link/glink-kde/tree/master/plugins/mpriscontrol
  *
  * See also:
  *     https://specifications.freedesktop.org/mpris-spec/latest/
  *     https://github.com/GNOME/gnome-shell/blob/master/js/ui/mpris.js
  */
 const MPRISPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkMPRISPlugin',
+    GTypeName: 'GLinkMPRISPlugin',
 }, class MPRISPlugin extends Plugin {
 
     _init(device) {
@@ -457,7 +456,7 @@ const MPRISPlugin = GObject.registerClass({
  * A class for mirroring a remote Media Player on DBus
  */
 const PlayerRemote = GObject.registerClass({
-    GTypeName: 'G-LinkMPRISPlayerRemote',
+    GTypeName: 'GLinkMPRISPlayerRemote',
 }, class PlayerRemote extends Player {
 
     _init(device, identity) {

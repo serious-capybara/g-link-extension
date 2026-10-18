@@ -21,7 +21,7 @@ const ALLOWED_TIMESTAMP_TIME_DIFFERENCE_SECONDS = 1800; // 30 min
  *
  */
 const Device = GObject.registerClass({
-    GTypeName: 'G-LinkDevice',
+    GTypeName: 'GLinkDevice',
     Properties: {
         'connected': GObject.ParamSpec.boolean(
             'connected',
@@ -107,7 +107,7 @@ const Device = GObject.registerClass({
                 'org.gnome.Shell.Extensions.GLink.Device',
                 true
             ),
-            path: `/org/gnome/shell/extensions/g-link/device/${this.id}/`,
+            path: `/org/gnome/shell/extensions/glink/device/${this.id}/`,
         });
         this._migratePlugins();
 

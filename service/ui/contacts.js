@@ -185,7 +185,7 @@ export function getDisplayNumber(contact, address) {
 const AvatarCache = new WeakMap();
 
 export const Avatar = GObject.registerClass({
-    GTypeName: 'G-LinkContactAvatar',
+    GTypeName: 'GLinkContactAvatar',
 }, class ContactAvatar extends Gtk.DrawingArea {
 
     _init(contact = null) {
@@ -310,7 +310,7 @@ export const Avatar = GObject.registerClass({
  * A row for a contact address (usually a phone number).
  */
 const AddressRow = GObject.registerClass({
-    GTypeName: 'G-LinkContactsAddressRow',
+    GTypeName: 'GLinkContactsAddressRow',
     Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/contacts-address-row.ui',
     Children: ['avatar', 'name-label', 'address-label', 'type-label'],
 }, class AddressRow extends Gtk.ListBoxRow {
@@ -373,7 +373,7 @@ const AddressRow = GObject.registerClass({
  * A widget for selecting contact addresses (usually phone numbers)
  */
 export const ContactChooser = GObject.registerClass({
-    GTypeName: 'G-LinkContactChooser',
+    GTypeName: 'GLinkContactChooser',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',

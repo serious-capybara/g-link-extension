@@ -10,6 +10,7 @@
     "50"
   ],
   "url": "https://github.com/G-Link/gnome-shell-extension-g-link/wiki",
-  "uuid": "g-link@glink.org",
-  "version": 72
+  "uuid": "glink@glink.local",
+  "version": 1,
+  "version-name": "1.0.0"
 }

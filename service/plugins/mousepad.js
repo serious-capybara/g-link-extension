@@ -114,12 +114,11 @@ const KeyMapCodes = new Map([
 
 /**
  * Mousepad Plugin
- * https://github.com/G-Link/glink-kde/tree/master/plugins/mousepad
  *
  * TODO: support outgoing mouse events?
  */
 const MousepadPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkMousepadPlugin',
+    GTypeName: 'GLinkMousepadPlugin',
     Properties: {
         'state': GObject.ParamSpec.boolean(
             'state',

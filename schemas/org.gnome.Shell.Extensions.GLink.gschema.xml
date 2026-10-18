@@ -7,7 +7,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 -->
 
 <schemalist gettext-domain="org.gnome.Shell.Extensions.GLink">
-  <schema id="org.gnome.Shell.Extensions.GLink" path="/org/gnome/shell/extensions/g-link/">
+  <schema id="org.gnome.Shell.Extensions.GLink" path="/org/gnome/shell/extensions/glink/">
     <!-- Extension Settings -->
     <key name="enabled" type="b">
       <default>true</default>

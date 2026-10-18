@@ -48,7 +48,7 @@ const DeviceState = {
  * A class representing the system battery.
  */
 const Battery = GObject.registerClass({
-    GTypeName: 'G-LinkSystemBattery',
+    GTypeName: 'GLinkSystemBattery',
     Signals: {
         'changed': {
             flags: GObject.SignalFlags.RUN_FIRST,

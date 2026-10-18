@@ -1,0 +1,9 @@
+# GJS / editor / OS
+node_modules/
+.cache/
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+*.zip

@@ -72,7 +72,7 @@ const isSuper = (key) => [Gdk.KEY_Super_L, Gdk.KEY_Super_R].includes(key);
 
 
 export const InputDialog = GObject.registerClass({
-    GTypeName: 'G-LinkMousepadInputDialog',
+    GTypeName: 'GLinkMousepadInputDialog',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',

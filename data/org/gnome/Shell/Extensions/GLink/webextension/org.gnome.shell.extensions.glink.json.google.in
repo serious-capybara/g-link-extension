@@ -1,0 +1,7 @@
+{
+    "name": "org.gnome.shell.extensions.glink",
+    "description": "Native messaging host for G-Link WebExtension",
+    "path": "@PACKAGE_DATADIR@/service/nativeMessagingHost.js",
+    "type": "stdio",
+    "allowed_origins": [ "chrome-extension://jfnifeihccihocjbfcfhicmmgpjicaec/" ]
+}
