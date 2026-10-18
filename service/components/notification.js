@@ -57,7 +57,7 @@ const GTK_MATCH = "interface='org.gtk.Notifications',member='AddNotification',ty
  * notifications and forwarding them to supporting devices.
  */
 const Listener = GObject.registerClass({
-    GTypeName: 'G-LinkNotificationListener',
+    GTypeName: 'GLinkNotificationListener',
     Signals: {
         'notification-added': {
             flags: GObject.SignalFlags.RUN_LAST,

@@ -625,7 +625,7 @@ export const Channel = GObject.registerClass({
                     'org.gnome.Shell.Extensions.GLink.Device',
                     true
                 ),
-                path: `/org/gnome/shell/extensions/g-link/device/${id}/`,
+                path: `/org/gnome/shell/extensions/glink/device/${id}/`,
             });
         }
 

@@ -17,7 +17,7 @@ const DBUS_PATH = '/org/gnome/Shell/Extensions/GLink/Clipboard';
  * The service class for this component
  */
 const Clipboard = GObject.registerClass({
-    GTypeName: 'G-LinkClipboard',
+    GTypeName: 'GLinkClipboard',
     Properties: {
         'text': GObject.ParamSpec.string(
             'text',

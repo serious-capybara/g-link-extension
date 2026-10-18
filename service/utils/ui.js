@@ -19,7 +19,7 @@ Gtk.Window.prototype.restoreGeometry = function (context = 'default') {
             'org.gnome.Shell.Extensions.GLink.WindowState',
             true
         ),
-        path: `/org/gnome/shell/extensions/g-link/${context}/`,
+        path: `/org/gnome/shell/extensions/glink/${context}/`,
     });
 
     // Size

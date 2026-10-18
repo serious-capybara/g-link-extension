@@ -38,7 +38,7 @@ import {MissingOpensslError} from '../utils/exceptions.js';
  * Class representing the G-Link service daemon.
  */
 const Service = GObject.registerClass({
-    GTypeName: 'G-LinkService',
+    GTypeName: 'GLinkService',
 }, class Service extends Gtk.Application {
 
     _init() {
@@ -81,7 +81,7 @@ const Service = GObject.registerClass({
         // For each device, remove it entirely if it violates the device ID
         // constraints, otherwise mark it unpaired to preserve the settings.
         const deviceList = this.settings.get_strv('devices').filter(id => {
-            const settingsPath = `/org/gnome/shell/extensions/g-link/device/${id}/`;
+            const settingsPath = `/org/gnome/shell/extensions/glink/device/${id}/`;
             if (!Device.validateId(id)) {
                 GLib.spawn_command_line_async(`dconf reset -f ${settingsPath}`);
                 Gio.File.rm_rf(GLib.build_filenamev([Config.CACHEDIR, id]));

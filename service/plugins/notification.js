@@ -158,11 +158,9 @@ function _removeNotification(id, application = null) {
 
 /**
  * Notification Plugin
- * https://github.com/G-Link/glink-kde/tree/master/plugins/notifications
- * https://github.com/G-Link/glink-kde/tree/master/plugins/sendnotifications
  */
 const NotificationPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkNotificationPlugin',
+    GTypeName: 'GLinkNotificationPlugin',
 }, class NotificationPlugin extends Plugin {
 
     _init(device) {

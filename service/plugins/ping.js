@@ -30,10 +30,9 @@ export const Metadata = {
 
 /**
  * Ping Plugin
- * https://github.com/G-Link/glink-kde/tree/master/plugins/ping
  */
 const PingPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkPingPlugin',
+    GTypeName: 'GLinkPingPlugin',
 }, class PingPlugin extends Plugin {
 
     _init(device) {

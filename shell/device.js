@@ -20,7 +20,7 @@ import Tooltip from './tooltip.js';
  * A battery widget with an icon, text percentage and time estimate tooltip
  */
 export const Battery = GObject.registerClass({
-    GTypeName: 'G-LinkShellDeviceBattery',
+    GTypeName: 'GLinkShellDeviceBattery',
 }, class Battery extends St.BoxLayout {
 
     _init(params) {
@@ -169,7 +169,7 @@ export const Battery = GObject.registerClass({
  * A cell signal strength widget with two icons
  */
 export const SignalStrength = GObject.registerClass({
-    GTypeName: 'G-LinkShellDeviceSignalStrength',
+    GTypeName: 'GLinkShellDeviceSignalStrength',
 }, class SignalStrength extends St.BoxLayout {
 
     _init(params) {
@@ -355,7 +355,7 @@ export class Menu extends PopupMenu.PopupMenuSection {
  * An indicator representing a Device in the Status Area
  */
 export const Indicator = GObject.registerClass({
-    GTypeName: 'G-LinkDeviceIndicator',
+    GTypeName: 'GLinkDeviceIndicator',
 }, class Indicator extends PanelMenu.Button {
 
     _init(params) {

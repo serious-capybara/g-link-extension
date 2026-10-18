@@ -41,8 +41,8 @@ export const ResponseType = {
  * A simplified version of the shortcut editor from GNOME Control Center
  */
 export const ShortcutChooserDialog = GObject.registerClass({
-    GTypeName: 'G-LinkPreferencesShortcutEditor',
-    Template: 'resource:///org.gnome.Shell.Extensions.GLink/ui/preferences-shortcut-editor.ui',
+    GTypeName: 'GLinkPreferencesShortcutEditor',
+    Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/preferences-shortcut-editor.ui',
     Children: [
         'cancel-button', 'set-button',
         'stack', 'summary-label',

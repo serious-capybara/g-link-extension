@@ -15,7 +15,7 @@ export class LockscreenRemoteAccess {
                 'org.gnome.Shell.Extensions.GLink',
                 null
             ),
-            path: '/org/gnome/shell/extensions/g-link/',
+            path: '/org/gnome/shell/extensions/glink/',
         });
     }
 

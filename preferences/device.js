@@ -74,8 +74,8 @@ export function titleSortFunc(row1, row2) {
  * A row for a section of settings
  */
 const SectionRow = GObject.registerClass({
-    GTypeName: 'G-LinkPreferencesSectionRow',
-    Template: 'resource:///org.gnome.Shell.Extensions.GLink/ui/preferences-section-row.ui',
+    GTypeName: 'GLinkPreferencesSectionRow',
+    Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/preferences-section-row.ui',
     Children: ['icon-image', 'title-label', 'subtitle-label'],
     Properties: {
         'gicon': GObject.ParamSpec.object(
@@ -204,8 +204,8 @@ const SectionRow = GObject.registerClass({
  * Command Editor Dialog
  */
 const CommandEditor = GObject.registerClass({
-    GTypeName: 'G-LinkPreferencesCommandEditor',
-    Template: 'resource:///org.gnome.Shell.Extensions.GLink/ui/preferences-command-editor.ui',
+    GTypeName: 'GLinkPreferencesCommandEditor',
+    Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/preferences-command-editor.ui',
     Children: [
         'cancel-button', 'save-button',
         'command-entry', 'name-entry', 'command-chooser',
@@ -249,7 +249,7 @@ const CommandEditor = GObject.registerClass({
  * A widget for configuring a remote device.
  */
 export const Panel = GObject.registerClass({
-    GTypeName: 'G-LinkPreferencesDevicePanel',
+    GTypeName: 'GLinkPreferencesDevicePanel',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',
@@ -259,7 +259,7 @@ export const Panel = GObject.registerClass({
             GObject.Object.$gtype
         ),
     },
-    Template: 'resource:///org.gnome.Shell.Extensions.GLink/ui/preferences-device-panel.ui',
+    Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/preferences-device-panel.ui',
     Children: [
         'sidebar', 'stack', 'infobar',
 
@@ -310,7 +310,7 @@ export const Panel = GObject.registerClass({
                 'org.gnome.Shell.Extensions.GLink.Device',
                 true
             ),
-            path: `/org/gnome/shell/extensions/g-link/device/${device.id}/`,
+            path: `/org/gnome/shell/extensions/glink/device/${device.id}/`,
         });
 
         // Infobar

@@ -143,7 +143,7 @@ export function installService() {
             'org.gnome.Shell.Extensions.GLink',
             null
         ),
-        path: '/org/gnome/shell/extensions/g-link/',
+        path: '/org/gnome/shell/extensions/glink/',
     });
 
     const confDir = GLib.get_user_config_dir();

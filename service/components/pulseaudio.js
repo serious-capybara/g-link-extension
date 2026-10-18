@@ -123,7 +123,7 @@ class Stream {
  * and offers a few convenience functions.
  */
 const Mixer = !Gvc ? null : GObject.registerClass({
-    GTypeName: 'G-LinkAudioMixer',
+    GTypeName: 'GLinkAudioMixer',
 }, class Mixer extends Gvc.MixerControl {
     _init(params) {
         super._init({name: 'G-Link'});

@@ -210,7 +210,7 @@ function setAvatarVisible(row, visible) {
  * A ListBoxRow for a preview of a conversation
  */
 const ConversationMessage = GObject.registerClass({
-    GTypeName: 'G-LinkMessagingConversationMessage',
+    GTypeName: 'GLinkMessagingConversationMessage',
     Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/messaging-conversation-message.ui',
     Children: ['grid', 'avatar', 'sender-label', 'message-label'],
 }, class ConversationMessage extends Gtk.ListBoxRow {
@@ -278,7 +278,7 @@ const ConversationMessage = GObject.registerClass({
  * A widget for displaying a conversation thread, with an entry for responding.
  */
 const Conversation = GObject.registerClass({
-    GTypeName: 'G-LinkMessagingConversation',
+    GTypeName: 'GLinkMessagingConversation',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',
@@ -725,7 +725,7 @@ const Conversation = GObject.registerClass({
  * A ListBoxRow for a preview of a conversation
  */
 const ConversationSummary = GObject.registerClass({
-    GTypeName: 'G-LinkMessagingConversationSummary',
+    GTypeName: 'GLinkMessagingConversationSummary',
     Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/messaging-conversation-summary.ui',
     Children: ['avatar', 'name-label', 'time-label', 'body-label'],
 }, class ConversationSummary extends Gtk.ListBoxRow {
@@ -807,7 +807,7 @@ const ConversationSummary = GObject.registerClass({
  * A Gtk.ApplicationWindow for SMS conversations
  */
 export const Window = GObject.registerClass({
-    GTypeName: 'G-LinkMessagingWindow',
+    GTypeName: 'GLinkMessagingWindow',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',
@@ -1226,7 +1226,7 @@ export const Window = GObject.registerClass({
  * A Gtk.ApplicationWindow for selecting from open conversations
  */
 export const ConversationChooser = GObject.registerClass({
-    GTypeName: 'G-LinkConversationChooser',
+    GTypeName: 'GLinkConversationChooser',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',

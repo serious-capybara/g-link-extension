@@ -176,7 +176,6 @@ if (!globalThis.HAVE_GNOME) {
 
 /**
  * A custom pre-comparison sanitizer for phone numbers
- * See: https://github.com/G-Link/glink-kde/blob/master/smsapp/conversationlistmodel.cpp#L200-L210
  *
  * @returns {string} Return the string stripped of leading 0, and ' ()-+'
  */
@@ -347,7 +346,6 @@ GLib.Variant.prototype.full_unpack = _full_unpack;
  * Additionally, the private key will be added using ssh-add to allow sftp
  * connections using Gio.
  *
- * See: https://github.com/G-Link/glink-kde/blob/master/core/glinkconfig.cpp#L119
  *
  * @param {string} certPath - Absolute path to a x509 certificate in PEM format
  * @param {string} keyPath - Absolute path to a private key in PEM format

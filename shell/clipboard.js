@@ -62,8 +62,8 @@ const TEXT_MIMETYPES = [
  * doesn't work in the background.
  */
 export const Clipboard = GObject.registerClass({
-    GTypeName: 'G-LinkShellClipboard',
-}, class G-LinkShellClipboard extends GjsPrivate.DBusImplementation {
+    GTypeName: 'GLinkShellClipboard',
+}, class GLinkShellClipboard extends GjsPrivate.DBusImplementation {
 
     _init(params = {}) {
         super._init({

@@ -58,7 +58,7 @@ const ServiceToggle = GObject.registerClass({
                 'org.gnome.Shell.Extensions.GLink',
                 null
             ),
-            path: '/org/gnome/shell/extensions/g-link/',
+            path: '/org/gnome/shell/extensions/glink/',
         });
 
         // Bind the toggle to enabled key
@@ -196,7 +196,7 @@ const ServiceToggle = GObject.registerClass({
                     'org.gnome.Shell.Extensions.GLink.Device',
                     true
                 ),
-                path: `/org/gnome/shell/extensions/g-link/device/${device.id}/`,
+                path: `/org/gnome/shell/extensions/glink/device/${device.id}/`,
             });
 
             // Keyboard Shortcuts
