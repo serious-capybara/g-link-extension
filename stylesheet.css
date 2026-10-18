@@ -1,0 +1,127 @@
+/*
+ * SPDX-FileCopyrightText: G-Link Developers https://github.com/G-Link
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+/* Device Menu
+
+PopupMenu.PopupMenuSection.g-link-device-section
+    PopupMenu.PopupMenuSection.g-link-device-menu
+        PopupMenu.PopupSeparatorMenuItem
+            StLabel.g-link-device-name
+            StBoxLayout.g-link-device-battery
+        PopupMenu.PopupMenuSection
+            StBoxLayout.g-link-list-box
+            StBoxLayout (Submenu Container)
+*/
+.g-link-device-section {
+}
+
+/* Title Bar */
+.g-link-device-name {
+    font-weight: bold;
+}
+
+.g-link-device-menu .popup-separator-menu-item {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Battery Widget */
+.g-link-device-battery {
+    spacing: 3px;
+}
+
+.g-link-device-battery StLabel {
+    font-size: 0.75em;
+}
+
+.g-link-device-battery StIcon {
+    icon-size: 16px;
+}
+
+/* Signal Strength Widget */
+.g-link-device-signal-strength {
+    spacing: 3px;
+}
+
+.g-link-device-signal-strength StLabel {
+    font-size: 0.75em;
+}
+
+.g-link-device-signal-strength StIcon {
+    icon-size: 16px;
+}
+
+/* List Box */
+.g-link-list-box {
+}
+
+
+/* Device Panel Indicator
+
+PanelMenu.Button.g-link-device-indicator
+    PopupMenu.PopupMenu
+        PopupMenu.PopupMenuSection.g-link-device-menu
+            PopupMenu.PopupSeparatorMenuItem
+                StLabel.g-link-device-name
+                StBoxLayout.g-link-device-battery
+            PopupMenu.PopupMenuSection
+                StBoxLayout.g-link-icon-box
+                StBoxLayout (Submenu Container)
+ */
+.g-link-device-indicator {
+    -st-icon-style: symbolic;
+}
+
+/* Icon Box */
+.g-link-icon-box {
+    margin: 0em 2em 0.5em;
+    spacing: 6px;
+}
+
+.g-link-icon-button {
+    border-radius: 1em;
+    padding: 0.5em;
+}
+
+.g-link-icon-button:hover, .g-link-icon-button:focus {
+    background-color: rgba(255, 255, 255, 0.125);
+}
+
+.g-link-icon-button StIcon {
+    icon-size: 1em;
+}
+
+
+/* Tooltip
+
+StBin.g-link-tooltip (inherits from .osd-window)
+    StBoxLayout || [ Custom ClutterActor ]
+        StIcon
+        StLabel
+*/
+.g-link-tooltip {
+    border-radius: 3px;
+    min-width: 0;
+    min-height: 0;
+    padding: 6px;
+}
+
+.g-link-tooltip > StBoxLayout {
+    spacing: 6px;
+}
+
+.g-link-tooltip StIcon {
+    icon-size: 16px;
+}
+
+.g-link-tooltip StLabel {
+    font-weight: normal;
+    text-align: left;
+}
+
+.g-link-tooltip StLabel:rtl {
+    text-align: right;
+}
