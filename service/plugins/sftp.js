@@ -79,7 +79,7 @@ const SFTPPlugin = GObject.registerClass({
             const host = this.device.channel.host;
 
             const regex = new RegExp(
-                `sftp://(${host}):(1739|17[4-5][0-9]|176[0-4])`
+                `sftp://(${host}):(209[6-9]|21[01][0-9]|212[0-8])`
             );
 
             for (const mount of this._volumeMonitor.get_mounts()) {
@@ -128,7 +128,7 @@ const SFTPPlugin = GObject.registerClass({
             return;
 
         const host = this.device.channel.host;
-        const regex = new RegExp(`sftp://(${host}):(1739|17[4-5][0-9]|176[0-4])`);
+        const regex = new RegExp(`sftp://(${host}):(209[6-9]|21[01][0-9]|212[0-8])`);
         const uri = mount.get_root().get_uri();
 
         if (!regex.test(uri))
@@ -262,12 +262,12 @@ const SFTPPlugin = GObject.registerClass({
 
     /**
      * Remove all host keys from ~/.ssh/known_hosts for {@link host} in the
-     * port range used by G-Link (1739-1764).
+     * port range used by G-Link (2096-2128).
      *
      * @param {string} host - A hostname or IP address
      */
     async _removeHostKey(host) {
-        for (let port = 1739; port <= 1764; port++) {
+        for (let port = 2096; port <= 2128; port++) {
             try {
                 const ssh_keygen = this._launcher.spawnv([
                     Config.SSHKEYGEN_PATH,

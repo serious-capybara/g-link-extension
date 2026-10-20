@@ -489,6 +489,12 @@ export const Transfer = GObject.registerClass({
             GObject.Object.$gtype
         ),
     },
+    Signals: {
+        // progress(bytes transferred of the current item, MiB/s over the last interval)
+        'progress': {
+            param_types: [GObject.TYPE_DOUBLE, GObject.TYPE_DOUBLE],
+        },
+    },
 }, class Transfer extends GObject.Object {
 
     _init(params = {}) {
@@ -671,12 +677,15 @@ export const Transfer = GObject.registerClass({
 
                 await this._ensureStream(item, this._cancellable);
 
+                const onProgress = (bytes, mbps) =>
+                    this.emit('progress', bytes, mbps);
+
                 if (item.packet.hasPayload()) {
                     await this.channel.download(item.packet, item.target,
-                        this._cancellable);
+                        this._cancellable, onProgress);
                 } else {
                     await this.channel.upload(item.packet, item.source,
-                        item.size, this._cancellable);
+                        item.size, this._cancellable, onProgress);
                 }
             }
         } catch (e) {

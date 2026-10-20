@@ -9,6 +9,7 @@ import GObject from 'gi://GObject';
 import Config from '../../config.js';
 import * as Core from '../core.js';
 import Device from '../device.js';
+import {AvahiDiscovery} from './mdns.js';
 
 // Retain compatibility with GLib < 2.80, which lacks GioUnix
 let GioUnix;
@@ -24,11 +25,141 @@ try {
 /**
  * TCP Port Constants
  */
-const PROTOCOL_PORT_DEFAULT = 1716;
-const PROTOCOL_PORT_MIN = 1716;
-const PROTOCOL_PORT_MAX = 1764;
-const TRANSFER_MIN = 1739;
-const TRANSFER_MAX = 1764;
+const PROTOCOL_PORT_DEFAULT = 2064;
+const PROTOCOL_PORT_MIN = 2064;
+const PROTOCOL_PORT_MAX = 2128;
+const TRANSFER_MIN = 2096;
+const TRANSFER_MAX = 2128;
+
+/**
+ * Discovery timing (milliseconds)
+ *
+ * UDP is lossy, and the first packets after a link comes up can be dropped while the radio wakes. We send a
+ * short burst instead of a single packet; receivers de-duplicate. NetworkMonitor emits several signals per
+ * real change, so they are coalesced with a short debounce (leading delay, trailing run).
+ */
+const BROADCAST_BURST_MS = [0, 150, 400];
+const NETWORK_DEBOUNCE_MS = 100;
+
+/**
+ * Bulk transfer tuning
+ *
+ * GIO's splice_async() moves data in 8 KiB steps through the GJS main loop, which caps throughput far below
+ * what Wi-Fi can do. We pump data ourselves in large chunks and overlap the next read with the current write.
+ */
+const TRANSFER_CHUNK_SIZE = 256 * 1024;
+const PROGRESS_INTERVAL_MS = 500;
+
+/**
+ * Pick a socket buffer size for a payload of {@link size} bytes.
+ *
+ * Returns 0 ("leave it to the kernel's TCP autotuning") for small payloads. Explicitly setting SO_SNDBUF /
+ * SO_RCVBUF turns autotuning off, so we only do it where a bigger fixed window clearly pays off: 1 MiB from
+ * 8 MiB payloads, 4 MiB from 256 MiB. The kernel may clamp the value (net.core.rmem_max/wmem_max); the
+ * granted size is logged so you can see what you actually got.
+ *
+ * @param {number} size - Payload size in bytes
+ * @returns {number} Buffer size in bytes, or 0 to keep the default
+ */
+export function _socketBufferFor(size) {
+    if (size >= 256 * 1024 * 1024)
+        return 4 * 1024 * 1024;
+
+    if (size >= 8 * 1024 * 1024)
+        return 1024 * 1024;
+
+    return 0;
+}
+
+/**
+ * Apply {@link _socketBufferFor} to a socket (Linux constants only).
+ *
+ * @param {Gio.Socket} socket - The socket to tune
+ * @param {number} size - Payload size in bytes
+ */
+function _tuneBulkSocket(socket, size) {
+    const bytes = _socketBufferFor(size);
+
+    if (!_LINUX_SOCKETS || bytes === 0 || !socket)
+        return;
+
+    try {
+        socket.set_option(1, 7, bytes); // SOL_SOCKET, SO_SNDBUF
+        socket.set_option(1, 8, bytes); // SOL_SOCKET, SO_RCVBUF
+        debug(`socket buffers requested ${bytes}, granted snd=${socket.get_option(1, 7)[1]} rcv=${socket.get_option(1, 8)[1]}`);
+    } catch (e) {
+        debug(e, 'Tuning socket buffers');
+    }
+}
+
+/**
+ * Copy {@link input} to {@link output} in large chunks, reading the next chunk while the current one is being
+ * written, and report progress and speed. Closes both streams, like g_output_stream_splice() with
+ * CLOSE_SOURCE | CLOSE_TARGET.
+ *
+ * @param {Gio.InputStream} input - Source stream
+ * @param {Gio.OutputStream} output - Destination stream
+ * @param {Gio.Cancellable} [cancellable] - A cancellable
+ * @param {Function} [onProgress] - Called as onProgress(bytesSoFar, megabytesPerSecond) about twice a second
+ * @returns {Promise<number>} The number of bytes copied
+ */
+async function _pump(input, output, cancellable = null, onProgress = null) {
+    const started = GLib.get_monotonic_time();
+    let windowStart = started;
+    let windowBytes = 0;
+    let total = 0;
+    let pending = null;
+
+    try {
+        pending = input.read_bytes_async(TRANSFER_CHUNK_SIZE,
+            GLib.PRIORITY_DEFAULT, cancellable);
+
+        for (;;) {
+            const bytes = await pending;
+            const count = bytes.get_size();
+
+            if (count === 0)
+                break;
+
+            // Overlap: start reading the next chunk before writing this one
+            pending = input.read_bytes_async(TRANSFER_CHUNK_SIZE,
+                GLib.PRIORITY_DEFAULT, cancellable);
+
+            await output.write_all_async(bytes.toArray(),
+                GLib.PRIORITY_DEFAULT, cancellable);
+
+            total += count;
+            windowBytes += count;
+
+            const now = GLib.get_monotonic_time();
+            if (now - windowStart >= PROGRESS_INTERVAL_MS * 1000) {
+                const mbps = (windowBytes / 1048576) / ((now - windowStart) / 1e6);
+                windowStart = now;
+                windowBytes = 0;
+
+                debug(`transfer ${(total / 1048576).toFixed(1)} MiB @ ${mbps.toFixed(1)} MiB/s`);
+                if (onProgress)
+                    onProgress(total, mbps);
+            }
+        }
+
+        const seconds = Math.max((GLib.get_monotonic_time() - started) / 1e6, 0.001);
+        const average = (total / 1048576) / seconds;
+        debug(`transfer finished: ${total} bytes in ${seconds.toFixed(2)} s (${average.toFixed(1)} MiB/s)`);
+        if (onProgress)
+            onProgress(total, average);
+
+        return total;
+    } finally {
+        // A read may still be in flight if the write failed: swallow its rejection
+        if (pending)
+            pending.catch(() => {});
+
+        // Always close, silencing errors (the stream may already be gone)
+        input.close_async(GLib.PRIORITY_DEFAULT, null, null);
+        output.close_async(GLib.PRIORITY_DEFAULT, null, null);
+    }
+}
 
 
 /*
@@ -67,6 +198,10 @@ export function _configureSocket(connection) {
             connection.socket.set_option(6, 512, 5);  // TCP_KEEPINTVL
             connection.socket.set_option(6, 1024, 3); // TCP_KEEPCNT
         }
+
+        // Small request/response packets must not wait for Nagle + delayed ACK (up to ~40 ms each)
+        if (_LINUX_SOCKETS)
+            connection.socket.set_option(6, 1, 1); // IPPROTO_TCP, TCP_NODELAY
 
         // Do this last because an error setting the keepalive options would
         // result in a socket that never times out
@@ -125,6 +260,12 @@ export const ChannelService = GObject.registerClass({
         this._networkMonitor = Gio.NetworkMonitor.get_default();
         this._networkAvailable = false;
         this._networkChangedId = 0;
+        this._networkDebounceId = 0;
+        this._burstIds = new Set();
+
+        // mDNS (Avahi). Only active while the manager reports us as discoverable.
+        this._mdns = null;
+        this._discoverable = false;
     }
 
     get certificate() {
@@ -169,11 +310,114 @@ export const ChannelService = GObject.registerClass({
     }
 
     _onNetworkChanged(monitor, network_available) {
-        if (this._networkAvailable === network_available)
+        // Do NOT bail out when availability is unchanged: roaming between two Wi-Fi networks never
+        // passes through "unavailable" but still needs a fresh announcement.
+        this._networkAvailable = network_available;
+
+        if (!network_available)
             return;
 
-        this._networkAvailable = network_available;
-        this.broadcast();
+        // Coalesce the burst of signals GIO emits for a single real change
+        if (this._networkDebounceId !== 0)
+            GLib.source_remove(this._networkDebounceId);
+
+        this._networkDebounceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT,
+            NETWORK_DEBOUNCE_MS, () => {
+                this._networkDebounceId = 0;
+                this.broadcastBurst();
+                this._mdns?.refresh();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    /**
+     * Send the LAN broadcast several times over ~400 ms (see BROADCAST_BURST_MS).
+     */
+    broadcastBurst() {
+        this._clearBurst();
+
+        for (const delay of BROADCAST_BURST_MS) {
+            if (delay === 0) {
+                this.broadcast();
+                continue;
+            }
+
+            const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+                this._burstIds.delete(id);
+                this.broadcast();
+                return GLib.SOURCE_REMOVE;
+            });
+            this._burstIds.add(id);
+        }
+    }
+
+    _clearBurst() {
+        for (const id of this._burstIds)
+            GLib.source_remove(id);
+
+        this._burstIds.clear();
+    }
+
+    /**
+     * Called by the Manager whenever its `discoverable` state changes (and once after start()).
+     * mDNS is only published/browsed while we are discoverable, matching what the UDP broadcast does.
+     *
+     * @param {boolean} discoverable - the Manager's discoverable state
+     */
+    setDiscoverable(discoverable) {
+        this._discoverable = discoverable;
+
+        if (!this.active)
+            return;
+
+        if (discoverable)
+            this._startMdns();
+        else
+            this._stopMdns();
+    }
+
+    _startMdns() {
+        try {
+            if (this._mdns === null) {
+                this._mdns = new AvahiDiscovery({
+                    deviceId: this.id,
+                    onResolved: this._onMdnsResolved.bind(this),
+                });
+            }
+
+            const body = this.identity.body;
+            this._mdns.publish(this._tcpPort, {
+                id: this.id,
+                name: body.deviceName,
+                type: body.deviceType,
+                protocol: `${body.protocolVersion}`,
+            });
+            this._mdns.start();
+        } catch (e) {
+            // mDNS is an optimization; never let it break the UDP/TCP path
+            debug(e, 'mDNS start');
+        }
+    }
+
+    _stopMdns() {
+        if (this._mdns === null)
+            return;
+
+        this._mdns.stop();
+        this._mdns = null;
+    }
+
+    /**
+     * A G-Link device announced itself via mDNS. Do what Android does after its own mDNS resolve: send our
+     * identity packet by UDP straight to it, so it connects to our TCP listener. The UDP port is the
+     * protocol's fixed 2064 (the mDNS port is the peer's TCP port, which we do not need here).
+     */
+    _onMdnsResolved(address, port, txt, name) {
+        if (!this._networkAvailable)
+            return;
+
+        debug(`mDNS peer ${name} at ${address} (tcp ${port}), sending identity`);
+        this.broadcast(`${address}:${PROTOCOL_PORT_DEFAULT}`);
     }
 
     _initCertificate() {
@@ -490,9 +734,20 @@ export const ChannelService = GObject.registerClass({
 
         this._active = true;
         this.notify('active');
+
+        if (this._discoverable)
+            this._startMdns();
     }
 
     stop() {
+        if (this._networkDebounceId !== 0) {
+            GLib.source_remove(this._networkDebounceId);
+            this._networkDebounceId = 0;
+        }
+
+        this._clearBurst();
+        this._stopMdns();
+
         if (this._networkChangedId) {
             this._networkMonitor.disconnect(this._networkChangedId);
             this._networkChangedId = 0;
@@ -834,20 +1089,24 @@ export const Channel = GObject.registerClass({
             this.output_stream.close_async(GLib.PRIORITY_DEFAULT, null, null);
     }
 
-    async download(packet, target, cancellable = null) {
+    async download(packet, target, cancellable = null, onProgress = null) {
         const address = Gio.InetSocketAddress.new_from_string(this.host,
             packet.payloadTransferInfo.port);
 
         const client = new Gio.SocketClient({enable_proxy: false});
+
+        // The receive window is negotiated in the SYN, so the buffer must be set BEFORE connecting
+        client.connect('event', (_client, event, _connectable, connection) => {
+            if (event === Gio.SocketClientEvent.CONNECTING && connection?.socket)
+                _tuneBulkSocket(connection.socket, packet.payloadSize);
+        });
+
         const connection = await client.connect_async(address, cancellable)
             .then(this._encryptClient.bind(this));
 
         // Start the transfer
-        const transferredSize = await target.splice_async(
-            connection.input_stream,
-            (Gio.OutputStreamSpliceFlags.CLOSE_SOURCE |
-             Gio.OutputStreamSpliceFlags.CLOSE_TARGET),
-            GLib.PRIORITY_DEFAULT, cancellable);
+        const transferredSize = await _pump(connection.input_stream, target,
+            cancellable, onProgress);
 
         // If we get less than expected, we've certainly got corruption
         if (transferredSize < packet.payloadSize) {
@@ -866,8 +1125,8 @@ export const Channel = GObject.registerClass({
         }
     }
 
-    async upload(packet, source, size, cancellable = null) {
-        // Start listening on the first available port between 1739-1764
+    async upload(packet, source, size, cancellable = null, onProgress = null) {
+        // Start listening on the first available port between 2096-2128
         const listener = new Gio.SocketListener();
         let port = TRANSFER_MIN;
 
@@ -887,7 +1146,10 @@ export const Channel = GObject.registerClass({
 
         // Listen for the incoming connection
         const acceptConnection = listener.accept_async(cancellable)
-            .then(result => this._encryptServer(result[0]));
+            .then(result => {
+                _tuneBulkSocket(result[0].socket, size);
+                return this._encryptServer(result[0]);
+            });
 
         // Create an upload request
         packet.body.payloadHash = this.checksum;
@@ -901,11 +1163,8 @@ export const Channel = GObject.registerClass({
             acceptConnection]);
 
         // Start the transfer
-        const transferredSize = await connection.output_stream.splice_async(
-            source,
-            (Gio.OutputStreamSpliceFlags.CLOSE_SOURCE |
-             Gio.OutputStreamSpliceFlags.CLOSE_TARGET),
-            GLib.PRIORITY_DEFAULT, cancellable);
+        const transferredSize = await _pump(source, connection.output_stream,
+            cancellable, onProgress);
 
         if (transferredSize !== size) {
             throw new Gio.IOErrorEnum({

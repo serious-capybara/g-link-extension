@@ -12,6 +12,7 @@ import * as Mpris from './mpris.js';
 import * as Notification from './notification.js';
 import * as Ping from './ping.js';
 import * as Presenter from './presenter.js';
+import * as Rdp from './rdp.js';
 import * as RunCommand from './runcommand.js';
 import * as Sftp from './sftp.js';
 import * as Share from './share.js';
@@ -30,6 +31,7 @@ export default {
     notification: Notification,
     ping: Ping,
     presenter: Presenter,
+    rdp: Rdp,
     runcommand: RunCommand,
     sftp: Sftp,
     share: Share,

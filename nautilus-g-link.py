@@ -45,7 +45,7 @@ LOCALE_DIR = os.path.join(
     GLib.get_user_data_dir(),
     "gnome-shell",
     "extensions",
-    "glink@glink.local",
+    "glink@serious-capybara",
     "locale",
 )
 

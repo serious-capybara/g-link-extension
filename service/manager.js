@@ -161,6 +161,9 @@ const Manager = GObject.registerClass({
         this._discoverable = value;
         this.notify('discoverable');
 
+        // Let backends that publish themselves (mDNS) follow the discoverable state
+        this.backends?.forEach(backend => backend.setDiscoverable?.(value));
+
         // FIXME: This whole thing just keeps getting uglier
         const application = Gio.Application.get_default();
 
@@ -309,6 +312,7 @@ const Manager = GObject.registerClass({
 
                 // Now try to start the backend, allowing us to retry if we fail
                 backend.start();
+                backend.setDiscoverable?.(this.discoverable);
             } catch (e) {
                 if (Gio.Application.get_default())
                     Gio.Application.get_default().notify_error(e);

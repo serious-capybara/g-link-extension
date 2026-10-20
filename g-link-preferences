@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-fallback_dir=$HOME/.local/share/gnome-shell/extensions/glink@glink.local/
+fallback_dir=$HOME/.local/share/gnome-shell/extensions/glink@serious-capybara/
 
 if [ ! -f "./g-link-preferences.js" ]; then
     # Try to find home path
