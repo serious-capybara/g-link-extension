@@ -21,19 +21,15 @@ try {
     };
 }
 
-/**"
+/**
  * TCP Port Constants
- *
- * Port ranges updated to match G-Link specification:
- * - Discovery: UDP 2064
- * - Main connection: TCP 2064-2128
- * - File transfers and SFTP: TCP 2096-2128
  */
-const PROTOCOL_PORT_DEFAULT = 2064;
-const PROTOCOL_PORT_MIN = 2064;
-const PROTOCOL_PORT_MAX = 2128;
-const TRANSFER_MIN = 2096;
-const TRANSFER_MAX = 2128;
+const PROTOCOL_PORT_DEFAULT = 1716;
+const PROTOCOL_PORT_MIN = 1716;
+const PROTOCOL_PORT_MAX = 1764;
+const TRANSFER_MIN = 1739;
+const TRANSFER_MAX = 1764;
+
 
 /*
  * One-time check for Linux/FreeBSD socket options
@@ -645,12 +641,22 @@ export const Channel = GObject.registerClass({
                 verified = certificate.is_same(connection.peer_certificate);
             } catch (e) {
                 logError(e);
-                // If we can't import the certificate, proceed without strict verification
-                // This handles cases where the PEM format is incompatible or missing
             }
 
+            /* The certificate is incorrect for one of two reasons, but both
+             * result in us resetting the certificate and unpairing the device.
+             *
+             * If the certificate failed to load, it is probably corrupted or
+             * otherwise invalid. In this case, if we try to continue we will
+             * certainly crash the Android app.
+             *
+             * If the certificate did not match what we expected the obvious
+             * thing to do is to notify the user, however experience tells us
+             * this is a result of the user doing something masochistic like
+             * nuking the Android app data or copying settings between machines.
+             */
             if (verified === false) {
-                // Certificate mismatch - log debug but allow connection
+                // Certificate mismatch - log warning but allow connection
                 // This supports users upgrading from older versions where certificates
                 // weren't exchanged between devices, and avoids breaking transfers
                 // when certificates are temporarily out of sync
