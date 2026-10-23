@@ -661,20 +661,18 @@ export const Channel = GObject.registerClass({
              * nuking the Android app data or copying settings between machines.
              */
             if (verified === false) {
-                // Certificate mismatch - log warning but allow connection
-                // This supports users upgrading from older versions where certificates
-                // weren't exchanged between devices, and avoids breaking transfers
-                // when certificates are temporarily out of sync
-                debug(`Certificate verification failed for ${this.identity.body.deviceName}; ` +
-                    'proceeding without strict verification. For best results, re-pair devices.');
-
-                // Reset the certificate to allow the connection
+                // Certificate verification failed - block the connection for security
+                // This ensures only properly paired devices with matching certificates
+                // can transfer files. If certificates don't match, the user must re-pair.
                 if (this.device) {
-                    // Don't unpair; just allow the connection
+                    this.device.unpair();
                 } else {
+                    settings.reset('paired');
                     settings.reset('certificate-pem');
-                    debug('Reset certificate-pem to allow connection');
                 }
+                const name = this.identity.body.deviceName;
+                throw new Error(`${name}: Authentication Failure - Certificates do not match. ` +
+                    'Re-pair devices to exchange certificates securely.');
             }
         }
 
