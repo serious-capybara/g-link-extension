@@ -23,12 +23,17 @@ try {
 
 /**
  * TCP Port Constants
+ *
+ * Port ranges matching G-Link Android application configuration:
+ * - Discovery: UDP 2064
+ * - Main connection: TCP 2064-2128
+ * - File transfers and SFTP: TCP 2096-2128
  */
-const PROTOCOL_PORT_DEFAULT = 1716;
-const PROTOCOL_PORT_MIN = 1716;
-const PROTOCOL_PORT_MAX = 1764;
-const TRANSFER_MIN = 1739;
-const TRANSFER_MAX = 1764;
+const PROTOCOL_PORT_DEFAULT = 2064;
+const PROTOCOL_PORT_MIN = 2064;
+const PROTOCOL_PORT_MAX = 2128;
+const TRANSFER_MIN = 2096;
+const TRANSFER_MAX = 2128;
 
 
 /*
