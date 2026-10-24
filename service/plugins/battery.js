@@ -32,7 +32,7 @@ export const Metadata = {
  * https://github.com/G-Link/glink-kde/tree/master/plugins/battery
  */
 const BatteryPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkBatteryPlugin',
+    GTypeName: 'GLinkBatteryPlugin',
 }, class BatteryPlugin extends Plugin {
 
     _init(device) {

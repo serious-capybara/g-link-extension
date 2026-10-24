@@ -32,7 +32,8 @@ const QuickSettingsMenu = Main.panel.statusArea.quickSettings;
  * A System Indicator used as the hub for spawning device indicators and
  * indicating that the extension is active when there are none.
  */
-const ServiceToggle = GObject.registerClass({
+const ServiceToggle = GObject.type_from_name('GLinkServiceIndicator') ||
+GObject.registerClass({
     GTypeName: 'GLinkServiceIndicator',
 }, class ServiceToggle extends QuickSettings.QuickMenuToggle {
 
@@ -119,7 +120,7 @@ const ServiceToggle = GObject.registerClass({
 
     async _initService() {
         try {
-            if (this.settings.get_boolean('enabled'))
+            if (this.settings && this.settings.get_boolean('enabled'))
                 await this.service.start();
             else
                 await this.service.reload();
@@ -132,21 +133,29 @@ const ServiceToggle = GObject.registerClass({
         const available = this.service.devices.filter(device => {
             return (device.connected && device.paired);
         });
-        const panelMode = this.settings.get_boolean('show-indicators');
+        const panelMode = (this.settings && this.settings.get_boolean('show-indicators'));
 
         // Hide status indicator if in Panel mode or no devices are available
-        serviceIndicator._indicator.visible = (!panelMode && available.length);
+        if (serviceIndicator?._indicator && typeof serviceIndicator._indicator.visible !== 'undefined') {
+            serviceIndicator._indicator.visible = (!panelMode && available.length > 0);
+        }
 
         // Show device indicators in Panel mode if available
         for (const device of this.service.devices) {
             const isAvailable = available.includes(device);
-            const indicator = Main.panel.statusArea[device.g_object_path];
+            const indicator = Main.panel.statusArea?.[device.g_object_path];
 
-            indicator.visible = panelMode && isAvailable;
+            if (indicator && typeof indicator.visible !== 'undefined') {
+                indicator.visible = panelMode && isAvailable;
+            }
 
             const menu = this._menus[device.g_object_path];
-            menu.actor.visible = !panelMode && isAvailable;
-            menu._title.actor.visible = !panelMode && isAvailable;
+            if (menu) {
+                if (menu.actor && typeof menu.actor.visible !== 'undefined')
+                    menu.actor.visible = !panelMode && isAvailable;
+                if (menu._title?.actor && typeof menu._title.actor.visible !== 'undefined')
+                    menu._title.actor.visible = !panelMode && isAvailable;
+            }
         }
 
         // Set subtitle on Quick Settings tile
@@ -274,7 +283,7 @@ const ServiceToggle = GObject.registerClass({
 
     async _onEnabledChanged(settings, key) {
         try {
-            if (this.settings.get_boolean('enabled'))
+            if (this.settings && this.settings.get_boolean('enabled'))
                 await this.service.start();
             else
                 await this.service.stop();
@@ -286,7 +295,7 @@ const ServiceToggle = GObject.registerClass({
     async _onServiceChanged(service, pspec) {
         try {
             // If it's enabled, we should try to restart now
-            if (this.settings.get_boolean('enabled'))
+            if (this.settings && this.settings.get_boolean('enabled'))
                 await this.service.start();
         } catch (e) {
             logError(e, 'G-Link');
@@ -303,7 +312,7 @@ const ServiceToggle = GObject.registerClass({
             for (const device of this.service.devices)
                 this._onDeviceRemoved(this.service, device, false);
 
-            if (!this.settings.get_boolean('keep-alive-when-locked'))
+            if (this.settings && !this.settings.get_boolean('keep-alive-when-locked'))
                 this.service.stop();
             this.service.destroy();
         }
@@ -312,9 +321,12 @@ const ServiceToggle = GObject.registerClass({
         this._keybindings.destroy();
 
         // Disconnect from any GSettings changes
-        this.settings.disconnect(this._enabledId);
-        this.settings.disconnect(this._panelModeId);
-        this.settings.run_dispose();
+        if (this.settings) {
+            this.settings.disconnect(this._enabledId);
+            this.settings.disconnect(this._panelModeId);
+            this.settings.run_dispose();
+            this.settings = null;
+        }
 
         // Destroy the PanelMenu.SystemIndicator actors
         this.menu.destroy();
@@ -323,16 +335,19 @@ const ServiceToggle = GObject.registerClass({
     }
 });
 
-const ServiceIndicator = GObject.registerClass(
-class ServiceIndicator extends QuickSettings.SystemIndicator {
+const ServiceIndicator = GObject.type_from_name('GLinkServiceIndicatorContainer') ||
+GObject.registerClass({
+    GTypeName: 'GLinkServiceIndicatorContainer',
+}, class ServiceIndicator extends QuickSettings.SystemIndicator {
     _init() {
         super._init();
 
         // Create the icon for the indicator
-        this._indicator = this._addIndicator();
-        this._indicator.icon_name = 'org.gnome.Shell.Extensions.GLink-symbolic';
-        // Hide the indicator by default
-        this._indicator.visible = false;
+        this._indicator = this._addIndicator ? this._addIndicator() : null;
+        if (this._indicator) {
+            this._indicator.icon_name = 'org.gnome.Shell.Extensions.GLink-symbolic';
+            this._indicator.visible = false;
+        }
 
         // Create the toggle menu and associate it with the indicator
         this.quickSettingsItems.push(new ServiceToggle());
@@ -345,7 +360,8 @@ class ServiceIndicator extends QuickSettings.SystemIndicator {
         // Set enabled state to false to kill the service on destroy
         this.quickSettingsItems.forEach(item => item.destroy());
         // Destroy the indicator
-        this._indicator.destroy();
+        if (this._indicator)
+            this._indicator.destroy();
         super.destroy();
     }
 });

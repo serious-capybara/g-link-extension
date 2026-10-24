@@ -31,14 +31,28 @@ export function setupGettext() {
 function getResource(relativePath) {
     try {
         const bytes = Gio.resources_lookup_data(
-            GLib.build_filenamev([Config.APP_PATH, relativePath]),
+            GLib.build_filenamev([Config.RESOURCE_PATH, relativePath]),
             Gio.ResourceLookupFlags.NONE
         );
 
         const source = new TextDecoder().decode(bytes.toArray());
 
-        return source.replace('@PACKAGE_DATADIR@', Config.PACKAGE_DATADIR);
+        return source.replaceAll('@PACKAGE_DATADIR@', Config.PACKAGE_DATADIR);
     } catch (e) {
+        // Fallback: load directly from file system on disk in Config.PACKAGE_DATADIR
+        try {
+            const filePath = GLib.build_filenamev([Config.PACKAGE_DATADIR, relativePath]);
+            const file = Gio.File.new_for_path(filePath);
+            if (file.query_exists(null)) {
+                const [ok, bytes] = GLib.file_get_contents(filePath);
+                if (ok) {
+                    const source = new TextDecoder().decode(bytes);
+                    return source.replaceAll('@PACKAGE_DATADIR@', Config.PACKAGE_DATADIR);
+                }
+            }
+        } catch (e2) {
+            logError(e2, 'G-Link Fallback');
+        }
         logError(e, 'G-Link');
         return null;
     }
@@ -54,6 +68,8 @@ function getResource(relativePath) {
  * @returns {boolean} A success boolean
  */
 function _installFile(dirname, basename, contents) {
+    if (contents === null || contents === undefined)
+        return false;
     try {
         const filename = GLib.build_filenamev([dirname, basename]);
         GLib.mkdir_with_parents(dirname, 0o755);
@@ -76,6 +92,10 @@ function _installFile(dirname, basename, contents) {
 function _installResource(dirname, basename, relativePath) {
     try {
         const contents = getResource(relativePath);
+        if (contents === null) {
+            logError(new Error(`Failed to load resource: ${relativePath}`), 'G-Link');
+            return false;
+        }
 
         return _installFile(dirname, basename, contents);
     } catch (e) {
@@ -191,8 +211,8 @@ export function installService() {
     // file manager scripts, and WebExtension manifests are installed.
     if (Config.IS_USER) {
         // DBus Service
-        if (!_installResource(dbusDir, dbusFile, `${dbusFile}.in`))
-            throw Error('G-Link: Failed to install DBus Service');
+        if (!_installResource(dbusDir, dbusFile, `${Config.APP_ID}.service.in`))
+            logError(new Error('G-Link: Failed to install DBus Service'), 'G-Link');
 
         // Desktop Entries
         _installResource(appDir, appFile, appFile);
@@ -245,24 +265,31 @@ export function installService() {
 export function setup(extensionPath) {
     // Ensure config.js is setup properly
     Config.PACKAGE_DATADIR = extensionPath;
-    const userDir = GLib.build_filenamev([GLib.get_user_data_dir(), 'gnome-shell']);
+    Config.GSETTINGS_SCHEMA_DIR = `${Config.PACKAGE_DATADIR}/schemas`;
+    Config.PACKAGE_LOCALEDIR = `${Config.PACKAGE_DATADIR}/locale`;
 
+    const userDir = GLib.build_filenamev([GLib.get_user_data_dir(), 'gnome-shell']);
     if (Config.PACKAGE_DATADIR.startsWith(userDir)) {
         Config.IS_USER = true;
-
-        Config.GSETTINGS_SCHEMA_DIR = `${Config.PACKAGE_DATADIR}/schemas`;
-        Config.PACKAGE_LOCALEDIR = `${Config.PACKAGE_DATADIR}/locale`;
     }
 
     // Init GResources
-    Gio.Resource.load(
-        GLib.build_filenamev([Config.PACKAGE_DATADIR, `${Config.APP_ID}.gresource`])
-    )._register();
+    try {
+        Gio.Resource.load(
+            GLib.build_filenamev([Config.PACKAGE_DATADIR, `${Config.APP_ID}.gresource`])
+        )._register();
+    } catch (e) {
+        // Ignore gresource load errors; disk fallbacks will handle missing resources
+    }
 
     // Init GSchema
-    Config.GSCHEMA = Gio.SettingsSchemaSource.new_from_directory(
-        Config.GSETTINGS_SCHEMA_DIR,
-        Gio.SettingsSchemaSource.get_default(),
-        false
-    );
+    try {
+        Config.GSCHEMA = Gio.SettingsSchemaSource.new_from_directory(
+            Config.GSETTINGS_SCHEMA_DIR,
+            Gio.SettingsSchemaSource.get_default(),
+            false
+        );
+    } catch (e) {
+        Config.GSCHEMA = Gio.SettingsSchemaSource.get_default();
+    }
 }

@@ -23,7 +23,8 @@ import('gi://GioUnix?version=2.0').catch(() => {}); // Set version for optional 
 /**
  * Class representing the G-Link service daemon.
  */
-const Preferences = GObject.registerClass({
+const Preferences = GObject.type_from_name('GLinkPreferences') ||
+GObject.registerClass({
     GTypeName: 'GLinkPreferences',
     Implements: [Gio.ActionGroup],
 }, class Preferences extends Gtk.Application {
@@ -52,13 +53,28 @@ const Preferences = GObject.registerClass({
         super.vfunc_startup();
 
         // Init some resources
-        const provider = new Gtk.CssProvider();
-        provider.load_from_resource(`${Config.APP_PATH}/application.css`);
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        );
+        try {
+            const provider = new Gtk.CssProvider();
+            provider.load_from_resource(`${Config.APP_PATH}/application.css`);
+            Gtk.StyleContext.add_provider_for_screen(
+                Gdk.Screen.get_default(),
+                provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            );
+        } catch (e) {
+            try {
+                const cssPath = `${Config.PACKAGE_DATADIR}/application.css`;
+                const provider = new Gtk.CssProvider();
+                provider.load_from_path(cssPath);
+                Gtk.StyleContext.add_provider_for_screen(
+                    Gdk.Screen.get_default(),
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                );
+            } catch (e2) {
+                // ignore CSS load error
+            }
+        }
 
         const actions = [
             ['refresh', null],
@@ -99,4 +115,12 @@ const Preferences = GObject.registerClass({
     }
 });
 
-await (new Preferences()).runAsync([system.programInvocationName].concat(ARGV));
+try {
+    const args = (typeof ARGV !== 'undefined' && Array.isArray(ARGV))
+        ? [system.programInvocationName].concat(ARGV)
+        : (system.argv || [system.programInvocationName]);
+    const prefs = new Preferences();
+    await prefs.runAsync(args);
+} catch (e) {
+    logError(e, 'G-Link Preferences Top Level');
+}

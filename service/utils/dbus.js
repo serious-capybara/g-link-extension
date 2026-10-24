@@ -46,7 +46,7 @@ function toUnderscoreCase(string) {
  * to be exported over DBus.
  */
 export const Interface = GObject.registerClass({
-    GTypeName: 'G-LinkDBusInterface',
+    GTypeName: 'GLinkDBusInterface',
     Implements: [Gio.DBusInterface],
     Properties: {
         'g-instance': GObject.ParamSpec.object(

@@ -4,15 +4,15 @@
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-fallback_dir=$HOME/.local/share/gnome-shell/extensions/g-link@glink.org/
+fallback_dir=$HOME/.local/share/gnome-shell/extensions/g-link@serious-capybara/
 
 if [ ! -f "./g-link-preferences.js" ]; then
     # Try to find home path
-    extension_dir="$(dirname "$(realpath "$(command -v "$0")")")"
+    extension_dir="$(dirname "$(realpath "$0")")"
     # try even harder
-    if [ ! -d "$extension_dir" ]; then
+    if [ ! -d "$extension_dir" ] || [ ! -f "$extension_dir/g-link-preferences.js" ]; then
         extension_dir="$fallback_dir"
     fi
     cd "$extension_dir" || exit 1
 fi
-exec /usr/bin/env gjs -m g-link-preferences.js
+exec /usr/bin/gjs -m g-link-preferences.js

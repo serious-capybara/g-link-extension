@@ -12,16 +12,13 @@ import GObject from 'gi://GObject?version=2.0';
 import Gtk from 'gi://Gtk?version=3.0';
 import 'gi://Pango?version=1.0';
 
-// GNOME 49 uses GIRepository 3.0
-import('gi://GIRepository?version=3.0').catch(() => {
-    import('gi://GIRepository?version=2.0').catch(() => {});
-});
-
 // DesktopAppInfo is no longer in Gio in GNOME 49
 let GioUnix;
-GioUnix = import('gi://GioUnix?version=2.0').catch(() => {
+try {
+    GioUnix = (await import('gi://GioUnix')).default;
+} catch {
     GioUnix = Gio;
-});
+}
 
 import system from 'system';
 
@@ -37,9 +34,10 @@ import {MissingOpensslError} from '../utils/exceptions.js';
 /**
  * Class representing the G-Link service daemon.
  */
-const Service = GObject.registerClass({
-    GTypeName: 'G-LinkService',
-}, class Service extends Gtk.Application {
+const Service = GObject.type_from_name('GLinkService') ||
+GObject.registerClass({
+    GTypeName: 'GLinkService',
+}, class Service extends Gio.Application {
 
     _init() {
         super._init({
@@ -189,8 +187,10 @@ const Service = GObject.registerClass({
                 return;
             }
 
-            const dialog = new ServiceUI.ErrorDialog(error);
-            dialog.present();
+            if (Gtk.init_check(null)) {
+                const dialog = new ServiceUI.ErrorDialog(error);
+                dialog.present();
+            }
         } catch (e) {
             logError(e);
         }
@@ -290,20 +290,42 @@ const Service = GObject.registerClass({
         ).monitor(Gio.FileMonitorFlags.WATCH_MOVES, null);
         this._serviceMonitor.connect('changed', () => this.quit());
 
-        // Init some resources
-        const provider = new Gtk.CssProvider();
-        provider.load_from_resource(`${Config.APP_PATH}/application.css`);
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
-            provider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        );
+        // Init some GTK resources if display is available
+        if (Gtk.init_check(null)) {
+            try {
+                const provider = new Gtk.CssProvider();
+                provider.load_from_resource(`${Config.APP_PATH}/application.css`);
+                Gtk.StyleContext.add_provider_for_screen(
+                    Gdk.Screen.get_default(),
+                    provider,
+                    Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                );
+            } catch (e) {
+                try {
+                    const cssPath = `${Config.PACKAGE_DATADIR}/application.css`;
+                    const provider = new Gtk.CssProvider();
+                    provider.load_from_path(cssPath);
+                    Gtk.StyleContext.add_provider_for_screen(
+                        Gdk.Screen.get_default(),
+                        provider,
+                        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+                    );
+                } catch (e2) {
+                    debug(e2, 'Loading application.css');
+                }
+            }
+        }
 
         // Ensure our handlers are registered
         try {
-            const appInfo = GioUnix.DesktopAppInfo.new(`${Config.APP_ID}.desktop`);
-            appInfo.add_supports_type('x-scheme-handler/sms');
-            appInfo.add_supports_type('x-scheme-handler/tel');
+            const DesktopAppInfo = Gio.DesktopAppInfo || GioUnix?.DesktopAppInfo;
+            if (DesktopAppInfo) {
+                const appInfo = DesktopAppInfo.new(`${Config.APP_ID}.desktop`);
+                if (appInfo) {
+                    appInfo.add_supports_type('x-scheme-handler/sms');
+                    appInfo.add_supports_type('x-scheme-handler/tel');
+                }
+            }
         } catch (e) {
             debug(e);
         }
@@ -311,7 +333,7 @@ const Service = GObject.registerClass({
         // GActions & GSettings
         this._initActions();
 
-        // TODO: remove after a reasonable period of time
+        // Migration and configuration init
         try {
             this._migrateConfiguration();
             if (this.settings.get_boolean('missing-openssl'))
@@ -321,8 +343,9 @@ const Service = GObject.registerClass({
             if (e instanceof MissingOpensslError) {
                 this.settings.set_boolean('missing-openssl', true);
                 this.notify_error(e, 'g-link-missing-openssl');
+            } else {
+                logError(e, 'G-Link Migration');
             }
-            throw e;
         }
 
         this.manager.start();
@@ -377,11 +400,13 @@ const Service = GObject.registerClass({
                 }
 
                 // Show chooser dialog
-                new ServiceUI.DeviceChooser({
-                    title: title,
-                    action_name: action,
-                    action_target: parameter,
-                });
+                if (Gtk.init_check(null)) {
+                    new ServiceUI.DeviceChooser({
+                        title: title,
+                        action_name: action,
+                        action_target: parameter,
+                    });
+                }
             } catch (e) {
                 logError(e, `G-Link: Opening ${file.get_uri()}`);
             }
@@ -821,4 +846,12 @@ const Service = GObject.registerClass({
     }
 });
 
-await (new Service()).runAsync([system.programInvocationName].concat(ARGV));
+try {
+    const args = (typeof ARGV !== 'undefined' && Array.isArray(ARGV))
+        ? [system.programInvocationName].concat(ARGV)
+        : (system.argv || [system.programInvocationName]);
+    const service = new Service();
+    await service.runAsync(args);
+} catch (e) {
+    logError(e, 'G-Link Daemon Top Level');
+}

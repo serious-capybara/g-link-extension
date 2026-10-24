@@ -132,7 +132,7 @@ export const MessageBox = {
  * https://github.com/G-Link/glink-android/tree/master/src/org/kde/glink/Plugins/SMSPlugin/
  */
 const SMSPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkSMSPlugin',
+    GTypeName: 'GLinkSMSPlugin',
     Properties: {
         'threads': GObject.param_spec_variant(
             'threads',

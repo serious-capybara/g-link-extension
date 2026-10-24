@@ -56,7 +56,7 @@ const VCARD_TYPED_META = /([a-z]+)=(.*)/i;
  * https://github.com/G-Link/glink-kde/tree/master/plugins/contacts
  */
 const ContactsPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkContactsPlugin',
+    GTypeName: 'GLinkContactsPlugin',
 }, class ContactsPlugin extends Plugin {
 
     _init(device) {

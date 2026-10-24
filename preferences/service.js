@@ -91,8 +91,9 @@ async function generateSupportLog(time) {
 /**
  * "Connect to..." Dialog
  */
-const ConnectDialog = GObject.registerClass({
-    GTypeName: 'G-LinkConnectDialog',
+const ConnectDialog = GObject.type_from_name('GLinkConnectDialog') ||
+GObject.registerClass({
+    GTypeName: 'GLinkConnectDialog',
     Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/connect-dialog.ui',
     Children: [
         'cancel-button', 'connect-button',
@@ -132,8 +133,9 @@ const ConnectDialog = GObject.registerClass({
 });
 
 
-export const Window = GObject.registerClass({
-    GTypeName: 'G-LinkPreferencesWindow',
+export const Window = GObject.type_from_name('GLinkPreferencesWindow') ||
+GObject.registerClass({
+    GTypeName: 'GLinkPreferencesWindow',
     Properties: {
         'display-mode': GObject.ParamSpec.string(
             'display-mode',

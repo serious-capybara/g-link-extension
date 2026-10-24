@@ -34,6 +34,46 @@ const PROTOCOL_PORT_MIN = 2064;
 const PROTOCOL_PORT_MAX = 2128;
 const TRANSFER_MIN = 2096;
 const TRANSFER_MAX = 2128;
+const TRANSFER_CHUNK_SIZE = 256 * 1024; // 256 KiB chunk size matching Android TransferTuning
+
+/**
+ * Overlapping asynchronous stream pump to maximize transfer throughput.
+ *
+ * Reads chunks using 256 KiB buffer and overlaps async read of next chunk with async write of current chunk.
+ */
+async function _pump(inputStream, outputStream, expectedSize, cancellable = null) {
+    let transferredSize = 0;
+
+    let readPromise = inputStream.read_bytes_async(
+        TRANSFER_CHUNK_SIZE,
+        GLib.PRIORITY_DEFAULT,
+        cancellable
+    );
+
+    while (true) {
+        const bytes = await readPromise;
+        const size = bytes ? bytes.get_size() : 0;
+        if (size <= 0)
+            break;
+
+        // Pipeline the next read before awaiting write
+        readPromise = inputStream.read_bytes_async(
+            TRANSFER_CHUNK_SIZE,
+            GLib.PRIORITY_DEFAULT,
+            cancellable
+        );
+
+        await outputStream.write_bytes_async(
+            bytes,
+            GLib.PRIORITY_DEFAULT,
+            cancellable
+        );
+
+        transferredSize += size;
+    }
+
+    return transferredSize;
+}
 
 
 /*
@@ -92,7 +132,8 @@ export function _configureSocket(connection) {
  * include the TCP port, while the IP address is taken from the UDP packet
  * itself. We respond by opening a TCP connection to that address.
  */
-export const ChannelService = GObject.registerClass({
+export const ChannelService = GObject.type_from_name('GLinkLanChannelService') ||
+GObject.registerClass({
     GTypeName: 'GLinkLanChannelService',
     Properties: {
         'certificate': GObject.ParamSpec.object(
@@ -268,14 +309,6 @@ export const ChannelService = GObject.registerClass({
             const sockAddr = Gio.InetSocketAddress.new(inetAddr, this.port);
             this._udp6.bind(sockAddr, true);
 
-            // Input stream
-            this._udp6_stream = new Gio.DataInputStream({
-                base_stream: new GioUnix.InputStream({
-                    fd: this._udp6.fd,
-                    close_fd: false,
-                }),
-            });
-
             // Watch socket for incoming packets
             this._udp6_source = this._udp6.create_source(GLib.IOCondition.IN, null);
             this._udp6_source.set_callback(this._onIncomingIdentity.bind(this, this._udp6));
@@ -284,10 +317,15 @@ export const ChannelService = GObject.registerClass({
             this._udp6 = null;
         }
 
-        // Our IPv6 socket also supports IPv4; we're all done
-        if (this._udp6 && this._udp6.speaks_ipv4()) {
-            this._udp4 = null;
-            return;
+        // On Linux, an IPv6 socket does NOT reliably receive IPv4 broadcast packets (255.255.255.255).
+        // We must set IPV6_V6ONLY on the IPv6 socket and ALWAYS initialize a dedicated IPv4 UDP socket.
+        if (this._udp6) {
+            try {
+                // IPPROTO_IPV6 = 41, IPV6_V6ONLY = 26
+                this._udp6.set_option(41, 26, 1);
+            } catch (e) {
+                // Ignore if platform doesn't support setting V6ONLY
+            }
         }
 
         try {
@@ -299,14 +337,6 @@ export const ChannelService = GObject.registerClass({
             const inetAddr = Gio.InetAddress.new_any(Gio.SocketFamily.IPV4);
             const sockAddr = Gio.InetSocketAddress.new(inetAddr, this.port);
             this._udp4.bind(sockAddr, true);
-
-            // Input stream
-            this._udp4_stream = new Gio.DataInputStream({
-                base_stream: new GioUnix.InputStream({
-                    fd: this._udp4.fd,
-                    close_fd: false,
-                }),
-            });
 
             // Watch input socket for incoming packets
             this._udp4_source = this._udp4.create_source(GLib.IOCondition.IN, null);
@@ -322,40 +352,33 @@ export const ChannelService = GObject.registerClass({
     }
 
     _onIncomingIdentity(socket) {
-        let host;
-
-        // Try to peek the remote address
         try {
-            host = socket.receive_message([], Gio.SocketMsgFlags.PEEK, null)[1]
-                .address.to_string();
-        } catch (e) {
-            logError(e);
-        }
-
-        // Whether or not we peeked the address, we need to read the packet
-        try {
-            let data;
-
-            if (socket === this._udp6)
-                data = this._udp6_stream.read_line_utf8(null)[0];
-            else
-                data = this._udp4_stream.read_line_utf8(null)[0];
-
-            // Discard the packet if we failed to peek the address
-            if (host === undefined)
+            const buffer = new Uint8Array(65536);
+            const [size, remoteAddress] = socket.receive_from(buffer, null);
+            if (size <= 0 || !remoteAddress)
                 return GLib.SOURCE_CONTINUE;
 
-            const packet = new Core.Packet(data);
+            const host = remoteAddress.address.to_string();
+            let data = String.fromCharCode.apply(null, buffer.subarray(0, size)).trim();
+            if (!data)
+                return GLib.SOURCE_CONTINUE;
+
+            const firstLine = data.split('\n')[0].trim();
+            if (!firstLine)
+                return GLib.SOURCE_CONTINUE;
+
+            const packet = new Core.Packet(firstLine);
             packet.body.tcpHost = host;
             this._onIdentity(packet);
         } catch (e) {
-            logError(e);
+            debug(e, 'Receiving UDP identity');
         }
 
         return GLib.SOURCE_CONTINUE;
     }
 
     async _onIdentity(packet) {
+        let channel = null;
         try {
             // Bail if the deviceId is missing
             if (!this.identity.body.deviceId)
@@ -382,7 +405,7 @@ export const ChannelService = GObject.registerClass({
             debug(packet);
 
             // Create a new channel
-            const channel = new Channel({
+            channel = new Channel({
                 backend: this,
                 certificate: this.certificate,
                 host: packet.body.tcpHost,
@@ -393,8 +416,6 @@ export const ChannelService = GObject.registerClass({
             // Check if channel is already open with this address
             if (this.channels.has(channel.address))
                 return;
-
-            this._channels.set(channel.address, channel);
 
             // Open a TCP connection
             const address = Gio.InetSocketAddress.new_from_string(
@@ -407,16 +428,20 @@ export const ChannelService = GObject.registerClass({
             // Connect the channel and attach it to the device on success
             await channel.open(connection);
 
+            this._channels.set(channel.address, channel);
             this.channel(channel);
         } catch (e) {
             logError(e);
+            if (channel && channel.address) {
+                this._channels.delete(channel.address);
+            }
         }
     }
 
     /**
      * Broadcast an identity packet
      *
-     * If {@link address] is not %null it may specify an IPv4 or IPv6 address
+     * If {@link address} is not %null it may specify an IPv4 or IPv6 address
      * to send the identity packet directly to, otherwise it will be broadcast
      * to the default address, 255.255.255.255.
      *
@@ -437,19 +462,38 @@ export const ChannelService = GObject.registerClass({
             // If we succeed, remember this host
             if (address instanceof Gio.InetSocketAddress) {
                 this._allowed.add(address.address.to_string());
-
-            // Broadcast to the network if no address is specified
+                if (this._udp4 !== null)
+                    this._udp4.send_to(address, this.identity.serialize(), null);
+                if (this._udp6 !== null)
+                    this._udp6.send_to(address, this.identity.serialize(), null);
             } else {
                 debug('Broadcasting to LAN');
-                address = this._udp_address;
+                // Broadcast burst schedule: immediate, 150ms, 400ms
+                const targetAddrs = [this._udp_address];
+
+                for (const addr of targetAddrs) {
+                    if (this._udp4 !== null)
+                        this._udp4.send_to(addr, this.identity.serialize(), null);
+                    if (this._udp6 !== null)
+                        this._udp6.send_to(addr, this.identity.serialize(), null);
+                }
+
+                // Burst follow-ups for high reliability
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 150, () => {
+                    try {
+                        if (this._active && this._udp4 !== null)
+                            this._udp4.send_to(this._udp_address, this.identity.serialize(), null);
+                    } catch (e) { }
+                    return GLib.SOURCE_REMOVE;
+                });
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 400, () => {
+                    try {
+                        if (this._active && this._udp4 !== null)
+                            this._udp4.send_to(this._udp_address, this.identity.serialize(), null);
+                    } catch (e) { }
+                    return GLib.SOURCE_REMOVE;
+                });
             }
-
-            // Broadcast on each open socket
-            if (this._udp6 !== null)
-                this._udp6.send_to(address, this.identity.serialize(), null);
-
-            if (this._udp4 !== null)
-                this._udp4.send_to(address, this.identity.serialize(), null);
         } catch (e) {
             debug(e, address);
         }
@@ -495,6 +539,7 @@ export const ChannelService = GObject.registerClass({
 
         this._active = true;
         this.notify('active');
+        this.broadcast();
     }
 
     stop() {
@@ -512,14 +557,12 @@ export const ChannelService = GObject.registerClass({
 
         if (this._udp6 !== null) {
             this._udp6_source.destroy();
-            this._udp6_stream.close(null);
             this._udp6.close();
             this._udp6 = null;
         }
 
         if (this._udp4 !== null) {
             this._udp4_source.destroy();
-            this._udp4_stream.close(null);
             this._udp4.close();
             this._udp4 = null;
         }
@@ -547,7 +590,8 @@ export const ChannelService = GObject.registerClass({
  * This class essentially just extends Core.Channel to set TCP socket options
  * and negotiate TLS encrypted connections.
  */
-export const Channel = GObject.registerClass({
+export const Channel = GObject.type_from_name('GLinkLanChannel') ||
+GObject.registerClass({
     GTypeName: 'GLinkLanChannel',
 }, class LanChannel extends Core.Channel {
 
@@ -850,12 +894,13 @@ export const Channel = GObject.registerClass({
         const connection = await client.connect_async(address, cancellable)
             .then(this._encryptClient.bind(this));
 
-        // Start the transfer
-        const transferredSize = await target.splice_async(
+        // Start the transfer using high-performance overlapping pump
+        const transferredSize = await _pump(
             connection.input_stream,
-            (Gio.OutputStreamSpliceFlags.CLOSE_SOURCE |
-             Gio.OutputStreamSpliceFlags.CLOSE_TARGET),
-            GLib.PRIORITY_DEFAULT, cancellable);
+            target,
+            packet.payloadSize,
+            cancellable
+        );
 
         // If we get less than expected, we've certainly got corruption
         if (transferredSize < packet.payloadSize) {
@@ -872,10 +917,16 @@ export const Channel = GObject.registerClass({
                 message: `Extra Data: ${transferredSize - packet.payloadSize}`,
             }));
         }
+
+        try {
+            await connection.close_async(GLib.PRIORITY_DEFAULT, null);
+        } catch (e) {
+            // ignore close error
+        }
     }
 
     async upload(packet, source, size, cancellable = null) {
-        // Start listening on the first available port between 1739-1764
+        // Start listening on the first available port between 2096-2128
         const listener = new Gio.SocketListener();
         let port = TRANSFER_MIN;
 
@@ -908,18 +959,25 @@ export const Channel = GObject.registerClass({
         const [, connection] = await Promise.all([requestUpload,
             acceptConnection]);
 
-        // Start the transfer
-        const transferredSize = await connection.output_stream.splice_async(
+        // Start the transfer using high-performance overlapping pump
+        const transferredSize = await _pump(
             source,
-            (Gio.OutputStreamSpliceFlags.CLOSE_SOURCE |
-             Gio.OutputStreamSpliceFlags.CLOSE_TARGET),
-            GLib.PRIORITY_DEFAULT, cancellable);
+            connection.output_stream,
+            size,
+            cancellable
+        );
 
         if (transferredSize !== size) {
             throw new Gio.IOErrorEnum({
                 code: Gio.IOErrorEnum.PARTIAL_INPUT,
                 message: 'Transfer incomplete',
             });
+        }
+
+        try {
+            await connection.close_async(GLib.PRIORITY_DEFAULT, null);
+        } catch (e) {
+            // ignore close error
         }
     }
 

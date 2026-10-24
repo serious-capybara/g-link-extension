@@ -43,7 +43,7 @@ export const Metadata = {
  * https://github.com/G-Link/glink-android/tree/master/src/org/kde/glink/Plugins/TelephonyPlugin
  */
 const TelephonyPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkTelephonyPlugin',
+    GTypeName: 'GLinkTelephonyPlugin',
 }, class TelephonyPlugin extends Plugin {
 
     _init(device) {

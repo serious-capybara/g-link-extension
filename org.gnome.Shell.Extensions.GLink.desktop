@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: GLink Developers https://github.com/GLink
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+[Desktop Entry]
+Type=Application
+Name=GLink
+Exec=gapplication launch org.gnome.Shell.Extensions.GLink %U
+Terminal=false
+NoDisplay=true
+Icon=org.gnome.Shell.Extensions.GLink
+Categories=Network;
+MimeType=x-scheme-handler/sms;x-scheme-handler/tel;
+DBusActivatable=true
+X-GNOME-UsesNotifications=true
+

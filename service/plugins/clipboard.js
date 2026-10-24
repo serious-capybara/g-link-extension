@@ -46,7 +46,7 @@ export const Metadata = {
  * https://github.com/G-Link/glink-kde/tree/master/plugins/clipboard
  */
 const ClipboardPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkClipboardPlugin',
+    GTypeName: 'GLinkClipboardPlugin',
 }, class ClipboardPlugin extends Plugin {
 
     _init(device) {

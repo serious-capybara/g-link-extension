@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: GLink Developers https://github.com/GLink
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+[D-BUS Service]
+Name=org.gnome.Shell.Extensions.GLink
+Exec=/usr/bin/gjs -m @PACKAGE_DATADIR@/service/daemon.js

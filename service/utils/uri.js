@@ -16,6 +16,25 @@ const PATTERN_URL = new RegExp(
 
 
 /**
+ * A helper class for parsing sms: URIs
+ */
+export class URI {
+    constructor(uri) {
+        let path = String(uri || '').replace(/^sms:?\/*\??/i, '');
+        let [recipientsStr, queryStr] = path.split('?');
+        this.recipients = recipientsStr ? recipientsStr.split(',').map(s => decodeURIComponent(s.trim())) : [];
+        this.body = '';
+        if (queryStr) {
+            const params = new URLSearchParams(queryStr);
+            this.body = params.get('body') || '';
+        }
+    }
+}
+
+export default URI;
+
+
+/**
  * Linkify text by wrapping URIs in `<a>` tags.
  *
  * @param {string} text - The text to linkify

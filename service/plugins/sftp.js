@@ -47,7 +47,7 @@ const MAX_MOUNT_DIRS = 12;
  * https://github.com/G-Link/glink-android/tree/master/src/org/kde/glink/Plugins/SftpPlugin
  */
 const SFTPPlugin = GObject.registerClass({
-    GTypeName: 'G-LinkSFTPPlugin',
+    GTypeName: 'GLinkSFTPPlugin',
 }, class SFTPPlugin extends Plugin {
 
     _init(device) {

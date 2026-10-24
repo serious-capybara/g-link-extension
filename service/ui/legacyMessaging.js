@@ -13,7 +13,7 @@ import '../utils/ui.js';
 
 
 const Dialog = GObject.registerClass({
-    GTypeName: 'G-LinkLegacyMessagingDialog',
+    GTypeName: 'GLinkLegacyMessagingDialog',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',

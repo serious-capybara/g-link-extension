@@ -61,9 +61,10 @@ const TEXT_MIMETYPES = [
  * A simple clipboard portal, especially useful on Wayland where GtkClipboard
  * doesn't work in the background.
  */
-export const Clipboard = GObject.registerClass({
-    GTypeName: 'G-LinkShellClipboard',
-}, class G-LinkShellClipboard extends GjsPrivate.DBusImplementation {
+export const Clipboard = GObject.type_from_name('GLinkShellClipboardPortal') ||
+GObject.registerClass({
+    GTypeName: 'GLinkShellClipboardPortal',
+}, class GLinkShellClipboardPortal extends GjsPrivate.DBusImplementation {
 
     _init(params = {}) {
         super._init({

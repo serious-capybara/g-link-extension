@@ -8,7 +8,7 @@ import GObject from 'gi://GObject';
 
 
 export const Player = GObject.registerClass({
-    GTypeName: 'G-LinkMediaPlayerInterface',
+    GTypeName: 'GLinkMediaPlayerInterface',
     Properties: {
         // Application Properties
         'CanQuit': GObject.ParamSpec.boolean(
@@ -469,7 +469,7 @@ export const Player = GObject.registerClass({
  * interfaces.
  */
 const PlayerProxy = GObject.registerClass({
-    GTypeName: 'G-LinkMPRISPlayer',
+    GTypeName: 'GLinkMPRISPlayer',
 }, class PlayerProxy extends Player {
 
     /**
@@ -793,7 +793,7 @@ const PlayerProxy = GObject.registerClass({
  * A manager for media players
  */
 const Manager = GObject.registerClass({
-    GTypeName: 'G-LinkMPRISManager',
+    GTypeName: 'GLinkMPRISManager',
     Signals: {
         'player-added': {
             param_types: [GObject.TYPE_OBJECT],

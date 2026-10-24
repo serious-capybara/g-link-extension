@@ -35,7 +35,7 @@ export const Metadata = {
  * https://github.com/G-Link/glink-kde/tree/master/plugins/findmyphone
  */
 const FindMyPhonePlugin = GObject.registerClass({
-    GTypeName: 'G-LinkFindMyPhonePlugin',
+    GTypeName: 'GLinkFindMyPhonePlugin',
 }, class FindMyPhonePlugin extends Plugin {
 
     _init(device) {
@@ -124,7 +124,7 @@ const _WM_SETTINGS = new Gio.Settings({
  * A custom GtkMessageDialog for alerting of incoming requests
  */
 const Dialog = GObject.registerClass({
-    GTypeName: 'G-LinkFindMyPhoneDialog',
+    GTypeName: 'GLinkFindMyPhoneDialog',
     Properties: {
         'device': GObject.ParamSpec.object(
             'device',

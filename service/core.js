@@ -126,8 +126,9 @@ export class Packet {
  * devices. The implementation is responsible for all negotiation of the
  * underlying protocol.
  */
-export const Channel = GObject.registerClass({
-    GTypeName: 'G-LinkChannel',
+export const Channel = GObject.type_from_name('GLinkChannel') ||
+GObject.registerClass({
+    GTypeName: 'GLinkChannel',
     Properties: {
         'closed': GObject.ParamSpec.boolean(
             'closed',
@@ -301,8 +302,9 @@ export const Channel = GObject.registerClass({
  * ChannelService implementations provide Channel objects, emitting the
  * ChannelService::channel signal when a new connection has been accepted.
  */
-export const ChannelService = GObject.registerClass({
-    GTypeName: 'G-LinkChannelService',
+export const ChannelService = GObject.type_from_name('GLinkChannelService') ||
+GObject.registerClass({
+    GTypeName: 'GLinkChannelService',
     Properties: {
         'active': GObject.ParamSpec.boolean(
             'active',
@@ -464,8 +466,9 @@ export const ChannelService = GObject.registerClass({
 /**
  * A class representing a file transfer.
  */
-export const Transfer = GObject.registerClass({
-    GTypeName: 'G-LinkTransfer',
+export const Transfer = GObject.type_from_name('GLinkTransfer') ||
+GObject.registerClass({
+    GTypeName: 'GLinkTransfer',
     Properties: {
         'channel': GObject.ParamSpec.object(
             'channel',

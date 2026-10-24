@@ -65,28 +65,28 @@ setupGettext();
 
 
 if (Config.IS_USER) {
-    // Infer libdir by assuming gnome-shell shares a common prefix with gjs;
-    // assume the parent directory if it's not there
-    let gir_paths;
+    let gir_paths = [];
+    try {
+        if (GIRepository.Repository.hasOwnProperty('get_search_path')) {
+            gir_paths = GIRepository.Repository.get_search_path();
+        } else if (GIRepository.Repository.dup_default) {
+            const repo = GIRepository.Repository.dup_default();
+            gir_paths = repo.get_search_path();
+        }
+    } catch (e) { }
 
-    if (GIRepository.Repository.hasOwnProperty('get_search_path')) {
-        // GNOME <= 48 / GIRepository 2.0
-        gir_paths = GIRepository.Repository.get_search_path();
-    } else {
-        // GNOME 49+ / GIRepository 3.0
-        const repo = GIRepository.Repository.dup_default();
-        gir_paths = repo.get_search_path();
+    let libdir = '/usr/lib64';
+    if (Array.isArray(gir_paths) && gir_paths.length) {
+        const found = gir_paths.find(path => path && (path.includes('/girepository-1.0') || path.includes('/gjs')));
+        if (found) {
+            libdir = found.replace(/\/gjs\/girepository-1\.0$/, '').replace(/\/girepository-1\.0$/, '');
+        }
     }
-
-    let libdir = gir_paths.find(path => {
-        return path.endsWith('/gjs/girepository-1.0');
-    }).replace('/gjs/girepository-1.0', '');
 
     const gsdir = GLib.build_filenamev([libdir, 'gnome-shell']);
 
     if (!GLib.file_test(gsdir, GLib.FileTest.IS_DIR)) {
-        const currentDir = `/${GLib.path_get_basename(libdir)}`;
-        libdir = libdir.replace(currentDir, '');
+        libdir = '/usr/lib64';
     }
 
     Config.GNOME_SHELL_LIBDIR = libdir;
@@ -95,12 +95,27 @@ if (Config.IS_USER) {
 
 // Load DBus interfaces
 Config.DBUS = (() => {
-    const bytes = Gio.resources_lookup_data(
-        GLib.build_filenamev([Config.APP_PATH, `${Config.APP_ID}.xml`]),
-        Gio.ResourceLookupFlags.NONE
-    );
+    let xml = null;
+    try {
+        const bytes = Gio.resources_lookup_data(
+            GLib.build_filenamev([Config.RESOURCE_PATH, `${Config.APP_ID}.xml`]),
+            Gio.ResourceLookupFlags.NONE
+        );
+        xml = new TextDecoder().decode(bytes.toArray());
+    } catch (e) {
+        try {
+            const filePath = GLib.build_filenamev([Config.PACKAGE_DATADIR, `${Config.APP_ID}.xml`]);
+            const [ok, bytes] = GLib.file_get_contents(filePath);
+            if (ok)
+                xml = new TextDecoder().decode(bytes);
+        } catch (e2) {
+            console.error('Failed to load DBus XML fallback', e2);
+        }
+    }
 
-    const xml = new TextDecoder().decode(bytes.toArray());
+    if (!xml)
+        throw new Error(`Failed to load DBus interface XML for ${Config.APP_ID}`);
+
     const dbus = Gio.DBusNodeInfo.new_for_xml(xml);
     dbus.nodes.forEach(info => info.cache_build());
 
@@ -401,14 +416,19 @@ Object.defineProperties(Gio.TlsCertificate.prototype, {
     'common_name': {
         get: function () {
             if (!this.__common_name) {
-                const proc = new Gio.Subprocess({
-                    argv: [Config.OPENSSL_PATH, 'x509', '-noout', '-subject', '-inform', 'pem'],
-                    flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
-                });
-                proc.init(null);
+                try {
+                    const proc = new Gio.Subprocess({
+                        argv: [Config.OPENSSL_PATH, 'x509', '-noout', '-subject', '-inform', 'pem'],
+                        flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
+                    });
+                    proc.init(null);
 
-                const stdout = proc.communicate_utf8(this.certificate_pem, null)[1];
-                this.__common_name = /(?:cn|CN) ?= ?([^,\n]*)/.exec(stdout)[1];
+                    const stdout = proc.communicate_utf8(this.certificate_pem, null)[1] || '';
+                    const match = /(?:cn|CN) ?= ?([^,\n]*)/.exec(stdout);
+                    this.__common_name = match ? match[1].trim() : GLib.get_host_name();
+                } catch (e) {
+                    this.__common_name = GLib.get_host_name();
+                }
             }
 
             return this.__common_name;
@@ -425,19 +445,23 @@ Object.defineProperties(Gio.TlsCertificate.prototype, {
     'pubkey_der': {
         value: function () {
             if (!this.__pubkey_der) {
-                let proc = new Gio.Subprocess({
-                    argv: [Config.OPENSSL_PATH, 'x509', '-noout', '-pubkey', '-inform', 'pem'],
-                    flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
-                });
-                proc.init(null);
+                try {
+                    let proc = new Gio.Subprocess({
+                        argv: [Config.OPENSSL_PATH, 'x509', '-noout', '-pubkey', '-inform', 'pem'],
+                        flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
+                    });
+                    proc.init(null);
 
-                const pubkey = proc.communicate_utf8(this.certificate_pem, null)[1];
-                proc = new Gio.Subprocess({
-                    argv: [Config.OPENSSL_PATH, 'pkey', '-pubin', '-inform', 'pem', '-outform', 'der'],
-                    flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
-                });
-                proc.init(null);
-                this.__pubkey_der = proc.communicate(new TextEncoder().encode(pubkey), null)[1];
+                    const pubkey = proc.communicate_utf8(this.certificate_pem, null)[1] || '';
+                    proc = new Gio.Subprocess({
+                        argv: [Config.OPENSSL_PATH, 'pkey', '-pubin', '-inform', 'pem', '-outform', 'der'],
+                        flags: Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE,
+                    });
+                    proc.init(null);
+                    this.__pubkey_der = proc.communicate(new TextEncoder().encode(pubkey), null)[1];
+                } catch (e) {
+                    this.__pubkey_der = new GLib.Bytes(new Uint8Array(0));
+                }
             }
 
             return this.__pubkey_der;

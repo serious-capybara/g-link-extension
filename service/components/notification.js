@@ -11,9 +11,11 @@ import * as DBus from '../utils/dbus.js';
 
 // DesktopAppInfo is no longer in Gio in GNOME 49
 let GioUnix;
-GioUnix = import('gi://GioUnix?version=2.0').catch(() => {
+try {
+    GioUnix = (await import('gi://GioUnix')).default;
+} catch {
     GioUnix = Gio;
-});
+}
 
 
 const _nodeInfo = Gio.DBusNodeInfo.new_for_xml(`
@@ -57,7 +59,7 @@ const GTK_MATCH = "interface='org.gtk.Notifications',member='AddNotification',ty
  * notifications and forwarding them to supporting devices.
  */
 const Listener = GObject.registerClass({
-    GTypeName: 'G-LinkNotificationListener',
+    GTypeName: 'GLinkNotificationListener',
     Signals: {
         'notification-added': {
             flags: GObject.SignalFlags.RUN_LAST,
@@ -241,7 +243,7 @@ const Listener = GObject.registerClass({
 
         try {
             // Check if notifications are disabled in desktop settings
-            if (!this._settings.get_boolean('show-banners'))
+            if (!this._settings || !this._settings.get_boolean('show-banners'))
                 return;
 
             parameters = parameters.full_unpack();
@@ -412,6 +414,7 @@ const Listener = GObject.registerClass({
             if (this._settings) {
                 this._settings.disconnect(this._settingsId);
                 this._settings.run_dispose();
+                this._settings = null;
             }
 
             // TODO: Gio.IOErrorEnum: The connection is closed

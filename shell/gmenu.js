@@ -381,7 +381,8 @@ export class ListBox extends PopupMenu.PopupMenuSection {
 /**
  * A St.Button subclass for iconic GMenu items
  */
-export const IconButton = GObject.registerClass({
+export const IconButton = GObject.type_from_name('GLinkShellIconButton') ||
+GObject.registerClass({
     GTypeName: 'GLinkShellIconButton',
 }, class Button extends St.Button {
 

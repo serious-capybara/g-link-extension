@@ -14,7 +14,7 @@ const SESSION_TIMEOUT = 300;
 
 
 const RemoteSession = GObject.registerClass({
-    GTypeName: 'G-LinkRemoteSession',
+    GTypeName: 'GLinkRemoteSession',
     Implements: [Gio.DBusInterface],
     Signals: {
         'closed': {

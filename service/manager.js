@@ -28,7 +28,8 @@ const backends = {
 /**
  * A manager for devices.
  */
-const Manager = GObject.registerClass({
+const Manager = GObject.type_from_name('GLinkManager') ||
+GObject.registerClass({
     GTypeName: 'GLinkManager',
     Properties: {
         'active': GObject.ParamSpec.boolean(

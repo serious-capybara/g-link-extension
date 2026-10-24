@@ -20,8 +20,9 @@ const ALLOWED_TIMESTAMP_TIME_DIFFERENCE_SECONDS = 1800; // 30 min
  * GActionGroup and GActionMap interfaces, like Gio.Application.
  *
  */
-const Device = GObject.registerClass({
-    GTypeName: 'G-LinkDevice',
+const Device = GObject.type_from_name('GLinkDevice') ||
+GObject.registerClass({
+    GTypeName: 'GLinkDevice',
     Properties: {
         'connected': GObject.ParamSpec.boolean(
             'connected',

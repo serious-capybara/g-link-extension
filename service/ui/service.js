@@ -27,7 +27,7 @@ OS:        ${GLib.get_os_info('PRETTY_NAME')}
  * A dialog for selecting a device
  */
 export const DeviceChooser = GObject.registerClass({
-    GTypeName: 'G-LinkServiceDeviceChooser',
+    GTypeName: 'GLinkServiceDeviceChooser',
     Properties: {
         'action-name': GObject.ParamSpec.string(
             'action-name',
@@ -193,7 +193,7 @@ export const DeviceChooser = GObject.registerClass({
  * A dialog for reporting an error.
  */
 export const ErrorDialog = GObject.registerClass({
-    GTypeName: 'G-LinkServiceErrorDialog',
+    GTypeName: 'GLinkServiceErrorDialog',
     Template: 'resource:///org/gnome/Shell/Extensions/GLink/ui/service-error-dialog.ui',
     Children: [
         'error-stack',

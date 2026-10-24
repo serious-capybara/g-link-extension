@@ -16,6 +16,10 @@ export default {
 
     IS_USER: false,
 
+    // Updated Resource Paths
+    RESOURCE_PATH: '/org/gnome/Shell/Extensions/GLink',
+    RESOURCE_ROOT: '/org/gnome/Shell/Extensions/GLink',
+
     // External binary paths
     OPENSSL_PATH: 'openssl',
     SSHADD_PATH: 'ssh-add',

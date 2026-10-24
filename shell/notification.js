@@ -48,7 +48,7 @@ const GtkNotificationDaemon = Main.notificationDaemon._gtkNotificationDaemon.con
  * A slightly modified Notification Banner with an entry field
  */
 const NotificationBanner = GObject.registerClass({
-    GTypeName: 'G-LinkNotificationBanner',
+    GTypeName: 'GLinkNotificationBanner',
 }, class NotificationBanner extends NotificationMessage {
 
     constructor(notification) {
@@ -168,7 +168,7 @@ const NotificationBanner = GObject.registerClass({
  * into existing sources.
  */
 const Source = GObject.registerClass({
-    GTypeName: 'G-LinkNotificationSource',
+    GTypeName: 'GLinkNotificationSource',
 }, class Source extends NotificationDaemon.GtkNotificationDaemonAppSource {
 
     _closeGLinkNotification(notification, reason) {

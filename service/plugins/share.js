@@ -63,7 +63,7 @@ export const Metadata = {
  *       https://github.com/G-Link/glink-kde/commit/28f11bd5c9a717fb9fbb3f02ddd6cea62021d055
  */
 const SharePlugin = GObject.registerClass({
-    GTypeName: 'G-LinkSharePlugin',
+    GTypeName: 'GLinkSharePlugin',
 }, class SharePlugin extends Plugin {
 
     _init(device) {
@@ -388,7 +388,7 @@ const SharePlugin = GObject.registerClass({
 
 /** A simple FileChooserDialog for sharing files */
 const FileChooserDialog = GObject.registerClass({
-    GTypeName: 'G-LinkShareFileChooserDialog',
+    GTypeName: 'GLinkShareFileChooserDialog',
 }, class FileChooserDialog extends Gtk.FileChooserDialog {
 
     _init(device) {
